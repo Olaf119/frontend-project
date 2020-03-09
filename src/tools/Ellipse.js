@@ -3,10 +3,10 @@ import { types, destroy } from "mobx-state-tree";
 import Utils from "../utils";
 import BaseTool from "./Base";
 import ToolMixin from "../mixins/Tool";
-import { RectRegionModel } from "../regions/RectRegion";
+import { EllipseRegionModel } from "../regions/EllipseRegion";
 import { guidGenerator, restoreNewsnapshot } from "../core/Helpers";
 
-const minSize = { w: 3, h: 3 };
+const minSize = { rx: 3, ry: 3 };
 
 const _Tool = types
   .model({
@@ -16,16 +16,15 @@ const _Tool = types
   .views(self => ({}))
   .actions(self => ({
     fromStateJSON(obj, fromModel) {
-      if ("rectanglelabels" in obj.value) {
+      if ("ellipselabels" in obj.value) {
         const states = restoreNewsnapshot(fromModel);
         states.fromStateJSON(obj);
-
         self.createRegion({
-          pid: obj.id,
+          pid: obj.pid,
           x: obj.value.x,
           y: obj.value.y,
-          sw: obj.value.width,
-          sh: obj.value.height,
+          rx: obj.value.radiusX,
+          ry: obj.value.radiusY,
           stroke: states.getSelectedColor(),
           states: [states],
           coordstype: "perc",
@@ -34,7 +33,7 @@ const _Tool = types
       }
     },
 
-    createRegion({ pid, x, y, sw, sh, states, coordstype, stroke, rotation }) {
+    createRegion({ pid, x, y, rx, ry, states, coordstype, stroke, rotation }) {
       const control = self.control;
 
       let localStates = states;
@@ -43,7 +42,7 @@ const _Tool = types
         localStates = [states];
       }
 
-      const rect = RectRegionModel.create({
+      const ellipse = EllipseRegionModel.create({
         id: guidGenerator(),
         pid: pid,
         states: localStates,
@@ -51,19 +50,19 @@ const _Tool = types
 
         x: x,
         y: y,
-        width: sw,
-        height: sh,
+        radiusX: rx,
+        radiusY: ry,
         rotation: rotation,
 
         opacity: parseFloat(control.opacity),
         fillcolor: stroke || control.fillcolor,
-        strokeWidth: Number(control.strokewidth),
+        strokeWidth: control.strokewidth,
         strokeColor: stroke || control.strokecolor,
       });
 
-      self.obj.addShape(rect);
+      self.obj.addShape(ellipse);
 
-      return rect;
+      return ellipse;
     },
 
     updateDraw(x, y) {
@@ -75,24 +74,24 @@ const _Tool = types
     },
 
     mousedownEv(ev, [x, y]) {
-      if (self.control.type === "rectanglelabels" && !self.control.isSelected) return;
+      if (self.control.type === "ellipselabels" && !self.control.isSelected) return;
 
       self.mode = "drawing";
 
       const { states, strokecolor } = self.statesAndParams;
-      const rect = self.createRegion({
+      const ellipse = self.createRegion({
         x: x,
         y: y,
-        sh: 1,
-        sw: 1,
+        rx: 1,
+        ry: 1,
         stroke: strokecolor,
         states: states,
         coordstype: "px",
       });
 
-      // if (self.control.type === "rectanglelabels") self.control.unselectAll();
+      // if (self.control.type === "ellipselabels") self.control.unselectAll();
 
-      return rect;
+      return ellipse;
     },
 
     mousemoveEv(ev, [x, y]) {
@@ -106,9 +105,9 @@ const _Tool = types
 
       const s = self.getActiveShape;
 
-      if (s.width < minSize.w || s.height < minSize.h) {
+      if (s.radiusX < minSize.rx || s.radiusY < minSize.ry) {
         destroy(s);
-        if (self.control.type === "rectanglelabels") self.control.unselectAll();
+        if (self.control.type === "ellipselabels") self.control.unselectAll();
       } else {
         self.obj.completion().highlightedNode.unselectRegion();
       }
@@ -117,6 +116,6 @@ const _Tool = types
     },
   }));
 
-const Rect = types.compose(ToolMixin, BaseTool, _Tool);
+const Ellipse = types.compose(ToolMixin, BaseTool, _Tool);
 
-export { Rect };
+export { Ellipse };
