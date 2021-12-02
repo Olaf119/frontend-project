@@ -1,31 +1,47 @@
-import { Children, cloneElement, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Children, cloneElement, CSSProperties, forwardRef, MouseEvent, MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Block, Elem } from "../../utils/bem";
 import { aroundTransition } from "../../utils/transition";
-import { alignElements } from "../../utils/dom";
+import { alignElements, ElementAlignment } from "../../utils/dom";
 import "./Tooltip.styl";
 
-export const Tooltip = forwardRef(({
+export interface TooltipProps {
+  title: string;
+  children: JSX.Element;
+  theme?: "light" | "dark";
+  defaultVisible?: boolean;
+  mouseEnterDelay?: number;
+  enabled?: boolean;
+  style?: CSSProperties;
+}
+
+export const Tooltip = forwardRef<HTMLElement, TooltipProps>(({
   title,
   children,
   defaultVisible,
   mouseEnterDelay = 0,
   enabled = true,
+  theme = "dark",
   style,
 }, ref) => {
   if (!children || Array.isArray(children)) {
     throw new Error("Tooltip does accept a single child only");
   }
 
-  const triggerElement = ref ?? useRef();
-  const tooltipElement = useRef();
+  const triggerElement = (ref ?? useRef<HTMLElement>()) as MutableRefObject<HTMLElement>;
+  const tooltipElement = useRef<HTMLElement>();
   const [offset, setOffset] = useState({});
   const [visibility, setVisibility] = useState(defaultVisible ? "visible" : null);
   const [injected, setInjected] = useState(false);
-  const [align, setAlign] = useState("top-center");
+  const [align, setAlign] = useState<ElementAlignment>("top-center");
 
   const calculatePosition = useCallback(() => {
-    const { left, top, align: resultAlign } = alignElements(triggerElement.current, tooltipElement.current, align, 10);
+    const { left, top, align: resultAlign } = alignElements(
+      triggerElement.current,
+      tooltipElement.current!,
+      align,
+      10,
+    );
 
     setOffset({ left, top });
     setAlign(resultAlign);
@@ -75,7 +91,7 @@ export const Tooltip = forwardRef(({
         <Block
           ref={tooltipElement}
           name="tooltip"
-          mod={{ align }}
+          mod={{ align, theme }}
           mix={visibilityClasses}
           style={{ ...offset, ...(style ?? {}) }}
         >
@@ -89,7 +105,7 @@ export const Tooltip = forwardRef(({
   const clone = cloneElement(child, {
     ...child.props,
     ref: triggerElement,
-    onMouseEnter(e) {
+    onMouseEnter(e: MouseEvent<HTMLElement>) {
       if (enabled === false) return;
 
       setTimeout(() => {
@@ -97,7 +113,7 @@ export const Tooltip = forwardRef(({
         child.props.onMouseEnter?.(e);
       }, mouseEnterDelay);
     },
-    onMouseLeave(e) {
+    onMouseLeave(e: MouseEvent<HTMLElement>) {
       if (enabled === false) return;
 
       performAnimation(false);
