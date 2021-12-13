@@ -1,16 +1,17 @@
 import keymaster from "keymaster";
 import { inject } from "mobx-react";
 import { observer } from "mobx-react-lite";
-import { createElement } from "react";
+import { createElement, Fragment } from "react";
 import { Tooltip } from "../common/Tooltip/Tooltip";
 import Hint from "../components/Hint/Hint";
+import { Block, Elem } from "../utils/bem";
 import { isDefined, isMacOS } from "../utils/utilities";
 import defaultKeymap from "./settings/keymap.json";
 
 // Validate keymap integrity
-const allowedKeympaKeys = ['key', 'mac', 'description'];
+const allowedKeympaKeys = ['key', 'mac', 'description', 'modifier', 'modifierDescription'];
 
-const validateKeymap = (keymap) => {
+const validateKeymap = (keymap: Keymap) => {
   Object.entries(keymap).forEach(([name, settings]) => {
     Object.keys(settings).forEach(key => {
       if (!allowedKeympaKeys.includes(key)) {
@@ -22,19 +23,31 @@ const validateKeymap = (keymap) => {
 
 validateKeymap(defaultKeymap);
 
+type HotkeyMap = {
+  [key: string]: keymaster.KeyHandler,
+}
+
+type HotkeyNamespace = {
+  description: string,
+  readonly keys: HotkeyMap,
+  readonly descriptions: [string, string][],
+}
+
 const DEFAULT_SCOPE = "__main__";
 const INPUT_SCOPE = "__input__";
 
-const _hotkeys_desc = {};
-const _namespaces = {};
-const _destructors = [];
+const _hotkeys_desc: { [key: string]: string } = {};
+const _namespaces: {[key: string]: HotkeyNamespace} = {};
+const _destructors: (() => void)[] = [];
 
 keymaster.filter = function(event) {
-  if (keymaster.getScope() === "__none__") return;
+  if (keymaster.getScope() === "__none__") return false;
 
-  const tag = (event.target || event.srcElement).tagName;
+  const tag = (event.target || event.srcElement)?.tagName;
 
-  keymaster.setScope(/^(INPUT|TEXTAREA|SELECT)$/.test(tag) ? INPUT_SCOPE : DEFAULT_SCOPE);
+  if (tag) {
+    keymaster.setScope(/^(INPUT|TEXTAREA|SELECT)$/.test(tag) ? INPUT_SCOPE : DEFAULT_SCOPE);
+  }
 
   return true;
 };
@@ -43,7 +56,7 @@ export const Hotkey = (
   namespace = "global",
   description = "Hotkeys",
 ) => {
-  let _hotkeys_map = {};
+  let _hotkeys_map: HotkeyMap = {};
 
   _namespaces[namespace] = _namespaces[namespace] ?? {
     description,
@@ -51,7 +64,7 @@ export const Hotkey = (
       return _hotkeys_map;
     },
     get descriptions() {
-      const descriptions = Object.keys(this.keys).reduce((res, key) => {
+      const descriptions = Object.keys(this.keys).reduce<[string, string][]>((res, key) => {
         if (_hotkeys_desc[key]) res.push([key, _hotkeys_desc[key]]);
 
         return res;
@@ -77,12 +90,8 @@ export const Hotkey = (
   return {
     /**
      * Add key
-     * @param {string} key Key shortcut
-     * @param {keymaster.KeyHandler} func Shortcut handler
-     * @param {string} desc Shortcut description
-     * @param {DEFAULT_SCOPE | INPUT_SCOPE} scope Shortcut scope
      */
-    addKey(key, func, desc, scope = DEFAULT_SCOPE) {
+    addKey(key: string, func: keymaster.KeyHandler, desc?: string, scope: string = DEFAULT_SCOPE) {
       if (!isDefined(key)) return;
 
       if (_hotkeys_map[key]) {
@@ -92,7 +101,7 @@ export const Hotkey = (
       const keyName = key.toLowerCase();
 
       _hotkeys_map[keyName] = func;
-      _hotkeys_desc[keyName] = desc;
+      if (desc) _hotkeys_desc[keyName] = desc;
 
       scope
         .split(",")
@@ -108,12 +117,8 @@ export const Hotkey = (
     /**
      * Given a key temp overwrites the function, the overwrite is removed
      * after the returning function is called
-     * @param {string} key Key shortcut
-     * @param {keymaster.KeyHandler} func Shortcut handler
-     * @param {string} desc Shortcut description
-     * @param {DEFAULT_SCOPE | INPUT_SCOPE} scope Shortcut scope
      */
-    overwriteKey(key, func, desc, scope = DEFAULT_SCOPE) {
+    overwriteKey(key: string, func: keymaster.KeyHandler, desc?: string, scope: string = DEFAULT_SCOPE) {
       if (!isDefined(key)) return;
 
       if (this.hasKey(key)) {
@@ -125,10 +130,8 @@ export const Hotkey = (
 
     /**
      * Removes a shortcut
-     * @param {string} key Key shortcut
-     * @param {DEFAULT_SCOPE | INPUT_SCOPE} scope Shortcut scope
      */
-    removeKey(key, scope = DEFAULT_SCOPE) {
+    removeKey(key: string, scope: string = DEFAULT_SCOPE) {
       if (!isDefined(key)) return;
 
       const keyName = key.toLowerCase();
@@ -149,17 +152,18 @@ export const Hotkey = (
 
     /**
      * Add hotkey from keymap
-     * @param {keyof keymap} name
-     * @param {keymaster.KeyHandler} func
-     * @param {DEFAULT_SCOPE | INPUT_SCOPE} scope
      */
-    addNamed(name, func, scope) {
+    addNamed(name: string, func: keymaster.KeyHandler, scope?: string) {
       const hotkey = Hotkey.keymap[name];
 
       if (isDefined(hotkey)) {
         const shortcut = isMacOS() ? hotkey.mac ?? hotkey.key : hotkey.key;
 
         this.addKey(shortcut, func, hotkey.description, scope);
+
+        if (hotkey.modifier) {
+          this.addKey(`${hotkey.modifier}+${shortcut}`, func, hotkey.modifierDescription, scope);
+        }
       } else {
         throw new Error(`Unknown named hotkey ${hotkey}`);
       }
@@ -167,16 +171,18 @@ export const Hotkey = (
 
     /**
      * Removed named hotkey
-     * @param {keyof keymap} name
-     * @param {DEFAULT_SCOPE | INPUT_SCOPE} scope
      */
-    removeNamed(name, scope) {
+    removeNamed(name: string, scope?: string) {
       const hotkey = Hotkey.keymap[name];
 
       if (isDefined(hotkey)) {
         const shortcut = isMacOS() ? hotkey.mac ?? hotkey.key : hotkey.key;
 
         this.removeKey(shortcut, scope);
+
+        if (hotkey.modifier) {
+          this.removeKey(`${hotkey.modifier}+${shortcut}`);
+        }
       } else {
         throw new Error(`Unknown named hotkey ${hotkey}`);
       }
@@ -188,19 +194,24 @@ export const Hotkey = (
      * @param {keymaster.KeyHandler} func
      * @param {DEFAULT_SCOPE | INPUT_SCOPE} scope
      */
-    overwriteNamed(name, func, scope) {
+    overwriteNamed(name: string, func: keymaster.KeyHandler, scope?: string) {
       const hotkey = Hotkey.keymap[name];
 
       if (isDefined(hotkey)) {
         const shortcut = isMacOS() ? hotkey.mac ?? hotkey.key : hotkey.key;
 
         this.overwriteKey(shortcut, func, hotkey.description, scope);
+
+        if (hotkey.modifier) {
+          this.overwriteKey(`${hotkey.modifier}+${shortcut}`, func, hotkey.modifierDescription, scope);
+        }
+
       } else {
-        throw new Error(`Unknown named hotkey ${hotkey}`);
+        throw new Error(`Unknown named hotkey ${name}`);
       }
     },
 
-    hasKey(key) {
+    hasKey(key: string) {
       if (!isDefined(key)) return;
 
       const keyName = key.toLowerCase();
@@ -216,13 +227,13 @@ export const Hotkey = (
       return _namespaces[namespace];
     },
 
-    addDescription(key, description) {
+    addDescription(key: string, description: string) {
       if (!_hotkeys_map[key]) {
         _hotkeys_desc[key] = description;
       }
     },
 
-    removeDescription(key) {
+    removeDescription(key: string) {
       if (!_hotkeys_map) {
         _hotkeys_desc[key];
       }
@@ -261,9 +272,9 @@ Hotkey.DEFAULT_SCOPE = DEFAULT_SCOPE;
 
 Hotkey.INPUT_SCOPE = INPUT_SCOPE;
 
-Hotkey.keymap = { ...defaultKeymap };
+Hotkey.keymap = { ...defaultKeymap } as Keymap;
 
-Hotkey.setKeymap = (newKeymap) => {
+Hotkey.setKeymap = (newKeymap: Keymap) => {
   validateKeymap(newKeymap);
 
   Object.assign(Hotkey.keymap, newKeymap);
@@ -285,27 +296,44 @@ Hotkey.unbindAll = () => {
  * Set scope of hotkeys
  * @param {*} scope
  */
-Hotkey.setScope = function(scope) {
+Hotkey.setScope = function(scope: string) {
   keymaster.setScope(scope);
 };
 
 /**
  * @param {{name: keyof defaultKeymap}} param0
  */
-Hotkey.Tooltip = inject("store")(observer(({ store, name, children, ...props }) => {
-  const hotkey = defaultKeymap[name];
+Hotkey.Tooltip = inject("store")(observer(({ store, name, children, ...props }: any) => {
+  const hotkey = Hotkey.keymap[name as string];
   const enabled = store.settings.enableTooltips && store.settings.enableHotkeys;
 
   if (isDefined(hotkey)) {
     const shortcut = isMacOS() ? hotkey.mac ?? hotkey.key : hotkey.key;
 
-    const title = enabled
-      ? `${props.title ?? hotkey.description}: [${shortcut}]`
-      : hotkey.description;
+    const description = props.title ?? hotkey.description;
+    const hotkeys: JSX.Element[] = [];
+
+    if (enabled) {
+      shortcut.split(",").forEach((combination) => {
+        const keys = combination
+          .split("+")
+          .map(key => createElement(Elem, {
+            tag: 'kbd',
+            name: 'key',
+          }, key));
+
+        hotkeys.push(createElement(Block, {
+          name: 'key-group',
+          tag: 'span',
+          style: { marginLeft: 5 },
+        }, ...keys));
+      });
+    }
 
     return createElement(Tooltip, {
       ...props,
-      title,
+      theme: "light",
+      title: createElement(Fragment, {}, ...[description,...hotkeys]),
     }, children);
   }
 
@@ -315,8 +343,8 @@ Hotkey.Tooltip = inject("store")(observer(({ store, name, children, ...props }) 
 /**
  * @param {{name: keyof defaultKeymap}} param0
  */
-Hotkey.Hint = inject("store")(observer(({ store, name }) => {
-  const hotkey = defaultKeymap[name];
+Hotkey.Hint = inject("store")(observer(({ store, name }: any) => {
+  const hotkey = Hotkey.keymap[name];
   const enabled = store.settings.enableTooltips && store.settings.enableHotkeys;
 
   if (isDefined(hotkey) && enabled) {
@@ -328,7 +356,7 @@ Hotkey.Hint = inject("store")(observer(({ store, name }) => {
   return null;
 }));
 
-window.HtxHotkeys = Hotkey;
+Object.assign(window, { HtxHotkeys: Hotkey });
 
 export default {
   DEFAULT_SCOPE,
