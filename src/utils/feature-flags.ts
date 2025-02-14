@@ -39,13 +39,7 @@ import { RichTextPlainRemote } from '../examples/rich_text_plain_remote';
 /**
  * Different
  */
-import { DateTime } from '../examples/datetime';
-import { Pairwise } from '../examples/pairwise';
-import { Repeater } from '../examples/repeater';
-import { Table } from '../examples/table';
-import { TableCsv } from '../examples/table_csv';
-import { Ranker } from '../examples/ranker';
-import { Buckets } from '../examples/ranker_buckets';
+
 
 import { TimeSeries } from '../examples/timeseries';
 import { TimeSeriesSingle } from '../examples/timeseries_single';
