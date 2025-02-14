@@ -49,10 +49,6 @@ export const Controls = controlsInjector(observer(({ store, history, annotation 
     if (isInProgress) return;
     setIsInProgress(true);
 
-    const selected = store.annotationStore?.selected;
-
-    if (addedCommentThisSession) {
-      selected?.submissionInProgress();
       callback();
     } else if ((currentComment ?? '').trim()) {
       e.preventDefault();
