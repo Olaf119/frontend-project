@@ -99,7 +99,7 @@ const result = [
 
 Before(async ({ LabelStudio }) => {
   LabelStudio.setFeatureFlags({
-    feat_front_lsdv_4583_multi_image_segmentation_short: true,
+    fflag_feat_front_lsdv_4583_multi_image_segmentation_short: true,
   });
 });
 
@@ -277,7 +277,9 @@ Scenario('No errors during brush export in MIG', async ({ I, LabelStudio, AtImag
   AtLabels.clickLabel('Moonwalker');
   AtImageView.drawThroughPoints(brushRegionPoints);
 
-  await AtImageView.multiImageGoForwardWithHotkey();
+  // @todo: We cannot use these hotkeys due to duplicating regions action used the same hotkey
+  // await AtImageView.multiImageGoForwardWithHotkey();
+  await AtImageView.multiImageGoForward();
 
   I.pressKey('u');
   I.say('Create brush regions on the second image');

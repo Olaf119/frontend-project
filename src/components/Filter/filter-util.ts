@@ -1,6 +1,9 @@
 import { FilterListInterface } from './FilterInterfaces';
+import { isDefined } from '../../utils/utilities';
 
-export const FilterItems = (items: any[], filterItem: FilterListInterface) => {
+export const FilterItemsByOperation = (items: any[], filterItem: FilterListInterface) => {
+  if ((!filterItem.value || filterItem.value === '') && filterItem.operation !== 'empty') return items;
+
   switch (filterItem.operation) {
     case 'contains':
       return contains(items, filterItem);
@@ -31,9 +34,28 @@ export const FilterItems = (items: any[], filterItem: FilterListInterface) => {
   }
 };
 
+export const FilterItems = (items: any[], filterList: FilterListInterface[]) => {
+  const _filteredList = [[...items]];
+
+  for (let i = 0; i < filterList.length; i++) {
+    if (!filterList[i].value && filterList[i].operation !== 'empty') continue;
+
+    if (filterList[i].logic === 'and') { // 0 is equal to AND, 1 is equal to OR
+      _filteredList[_filteredList.length - 1] = FilterItemsByOperation(_filteredList[_filteredList.length - 1], filterList[i]);
+    } else {
+      _filteredList.push(FilterItemsByOperation(items, filterList[i]));
+    }
+  }
+
+  return _filteredList.flat(1).reduce(
+    (unique, item) => (unique.includes(item) ? unique : [...unique, item]),
+    [],
+  );
+};
+
 
 const contains = (items: any[], filterItem: FilterListInterface) => {
-  if (filterItem.value) {
+  if (isDefined(filterItem.value)) {
     return items.filter((obj) => {
       const item = getFilteredPath(filterItem.path, obj);
 
@@ -45,7 +67,7 @@ const contains = (items: any[], filterItem: FilterListInterface) => {
 };
 
 const notcontains = (items: any[], filterItem: FilterListInterface) => {
-  if (filterItem.value) {
+  if (isDefined(filterItem.value)) {
     return items.filter((obj) => {
       const item = getFilteredPath(filterItem.path, obj);
 
@@ -57,7 +79,7 @@ const notcontains = (items: any[], filterItem: FilterListInterface) => {
 };
 
 const greater = (items: any[], filterItem: FilterListInterface) => {
-  if (filterItem.value) {
+  if (isDefined(filterItem.value)) {
     return items.filter((obj) => {
       const item = getFilteredPath(filterItem.path, obj);
 
@@ -69,7 +91,7 @@ const greater = (items: any[], filterItem: FilterListInterface) => {
 };
 
 const greaterOrEqual = (items: any[], filterItem: FilterListInterface) => {
-  if (filterItem.value) {
+  if (isDefined(filterItem.value)) {
     return items.filter((obj) => {
       const item = getFilteredPath(filterItem.path, obj);
 
@@ -81,7 +103,7 @@ const greaterOrEqual = (items: any[], filterItem: FilterListInterface) => {
 };
 
 const less = (items: any[], filterItem: FilterListInterface) => {
-  if (filterItem.value) {
+  if (isDefined(filterItem.value)) {
     return items.filter((obj) => {
       const item = getFilteredPath(filterItem.path, obj);
 
@@ -93,7 +115,7 @@ const less = (items: any[], filterItem: FilterListInterface) => {
 };
 
 const lessOrEqual = (items: any[], filterItem: FilterListInterface) => {
-  if (filterItem.value) {
+  if (isDefined(filterItem.value)) {
     return items.filter((obj) => {
       const item = getFilteredPath(filterItem.path, obj);
 
@@ -105,11 +127,11 @@ const lessOrEqual = (items: any[], filterItem: FilterListInterface) => {
 };
 
 const equal = (items: any[], filterItem: FilterListInterface) => {
-  if (filterItem.value) {
+  if (isDefined(filterItem.value)) {
     return items.filter((obj) => {
       const item = getFilteredPath(filterItem.path, obj);
 
-      return item.toString().toLowerCase() === filterItem.value.toLowerCase();
+      return item?.toString().toLowerCase() === filterItem.value?.toString().toLowerCase();
     });
   } else {
     return items;
@@ -117,11 +139,11 @@ const equal = (items: any[], filterItem: FilterListInterface) => {
 };
 
 const notequal = (items: any[], filterItem: FilterListInterface) => {
-  if (filterItem.value) {
+  if (isDefined(filterItem.value)) {
     return items.filter((obj) => {
       const item = getFilteredPath(filterItem.path, obj);
 
-      return item.toString().toLowerCase() !== filterItem.value.toLowerCase();
+      return item?.toString().toLowerCase() !== filterItem.value?.toLowerCase();
     });
   } else {
     return items;
@@ -129,7 +151,7 @@ const notequal = (items: any[], filterItem: FilterListInterface) => {
 };
 
 const between = (items: any[], filterItem: FilterListInterface) => {
-  if (filterItem.value) {
+  if (isDefined(filterItem.value)) {
     return items.filter((obj) => {
       const item = getFilteredPath(filterItem.path, obj);
 
@@ -141,7 +163,7 @@ const between = (items: any[], filterItem: FilterListInterface) => {
 };
 
 const notbetween = (items: any[], filterItem: FilterListInterface) => {
-  if (filterItem.value) {
+  if (isDefined(filterItem.value)) {
     return items.filter((obj) => {
       const item = getFilteredPath(filterItem.path, obj);
 
@@ -153,14 +175,14 @@ const notbetween = (items: any[], filterItem: FilterListInterface) => {
 };
 
 const regex = (items: any[], filterItem: FilterListInterface) => {
-  try{
+  try {
     return items.filter((obj) => {
       const item = getFilteredPath(filterItem.path, obj);
       const regex = new RegExp(filterItem.value, 'g');
 
       return item.match(regex);
     });
-  } catch(e) {
+  } catch (e) {
     return items;
   }
 };
@@ -169,11 +191,11 @@ const empty = (items: any[], filterItem: FilterListInterface) => {
   return items.filter((obj) => {
     const item = getFilteredPath(filterItem.path, obj);
 
-    return item === '' || !item || item === null || item === undefined;
+    return item === '' || !item || item === null || item === undefined || item === 'blank';
   });
 };
 
-const getFilteredPath = (path: string | string[], items: any[], separator='.') => {
+const getFilteredPath = (path: string | string[], items: any[], separator = '.') => {
   const properties = Array.isArray(path) ? path : path.split(separator);
 
   return properties.reduce((prev, curr) => prev?.[curr], items);

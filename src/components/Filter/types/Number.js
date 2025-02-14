@@ -3,31 +3,19 @@ import React from 'react';
 import { FilterInput } from '../FilterInput';
 import { Common } from './Common';
 
-const valueFilter = (value) => {
-  if (value) {
-    if (typeof value === 'number') {
-      return value;
-    } else if (typeof value === 'string') {
-      return value.replace(/([^\d.,]+)/, '');
-    } else {
-      return value || null;
-    }
-  }
-
-  return null;
-};
-
-const NumberInput = observer(( props ) => {
+const NumberInput = observer((props) => {
   return (
     <FilterInput
       {...props}
       type='number'
-      onChange={(value) => props.onChange(valueFilter(value))}
+      value={props.value}
+      pattern={'[0-9*]'}
+      onChange={props.onChange}
     />
   );
 });
 
-const RangeInput = observer(( props ) => {
+const RangeInput = observer((props) => {
   const min = props.value?.min ?? null;
   const max = props.value?.max ?? null;
 

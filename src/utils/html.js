@@ -93,7 +93,7 @@ function getNextNode(node) {
 }
 
 export function isValidTreeNode(node, commonAncestor) {
-  while(node) {
+  while (node) {
     if (commonAncestor && node === commonAncestor) return true;
     if (node.nodeType === Node.ELEMENT_NODE && node.dataset.skipNode === 'true') return false;
     node = node.parentNode;
@@ -245,7 +245,7 @@ function highlightRange(normedRange, cssClass, cssStyle) {
  * @param {Range} range
  */
 function splitBoundaries(range) {
-  let { startContainer, endContainer  } = range;
+  let { startContainer, endContainer } = range;
   const { startOffset, endOffset } = range;
 
   if (isTextNode(endContainer)) {
@@ -383,7 +383,7 @@ function moveStylesBetweenHeadTags(srcHead, destHead) {
   const rulesByStyleId = {};
   const fragment = document.createDocumentFragment();
 
-  for (let i = 0; i < srcHead.children.length; ) {
+  for (let i = 0; i < srcHead.children.length;) {
     const style = srcHead.children[i];
 
     if (style?.tagName !== 'STYLE') {
@@ -499,7 +499,7 @@ export const htmlEscape = string => {
 };
 
 function findNodeAt(context, at) {
-  for (let node = context.firstChild, l = 0; node; ) {
+  for (let node = context.firstChild, l = 0; node;) {
     if (node.textContent.length + l >= at)
       if (!node.firstChild) return [node, at - l];
       else node = node.firstChild;
@@ -508,6 +508,36 @@ function findNodeAt(context, at) {
       node = node.nextSibling;
     }
   }
+}
+
+/**
+ * Sanitize html from scripts and iframes
+ * @param {string} html
+ * @param {object} [options]
+ * @param {boolean} [options.useStub] use stub instead of removing to keep tags number and order for html tasks
+ * @param {boolean} [options.useHeadStub] use different stub for scripts in head to not have excess tags there
+ * @returns {string}
+ */
+function sanitizeHtml(html, options = {}) {
+  if (!html) return '';
+
+  const reScripts = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script\s*>/gi;
+  const stub = options.useStub ? '<ls-stub></ls-stub>' : '';
+  const headStub = '<ls-head-stub></ls-head-stub>';
+
+  if (options.useHeadStub) {
+    html = html.replace(/(<head.*?>)(.*?)(<\/head>)/, (_, opener, body, closer) => {
+      return [opener, body.replace(reScripts, headStub), closer].join('');
+    });
+  }
+
+  const sanitized = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script\s*>/gi, stub)
+    .replace(/<iframe\b.*?(?:\/>|<\/iframe>)/g, stub)
+    // remove events
+    .replace(/\bon[a-z]+\s*=\s*(?:(['"])(?!\1).+?\1|(?:\S+?\(.*?\)(?=[\s>])))(.*?)/gi, '');
+
+  return sanitized;
 }
 
 export {
@@ -519,6 +549,7 @@ export {
   findIdxContainer,
   toGlobalOffset,
   highlightRange,
+  sanitizeHtml,
   splitBoundaries,
   normalizeBoundaries,
   createClass,
