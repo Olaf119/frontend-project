@@ -1,6 +1,8 @@
-import { getEnv, getParent, getRoot, getType, types } from "mobx-state-tree";
-import { guidGenerator } from "../core/Helpers";
-import { AnnotationMixin } from "./AnnotationMixin";
+import { getEnv, getParent, getRoot, getType, types } from 'mobx-state-tree';
+import { guidGenerator } from '../core/Helpers';
+import { isDefined } from '../utils/utilities';
+import { AnnotationMixin } from './AnnotationMixin';
+import { ReadOnlyRegionMixin } from './ReadOnlyMixin';
 
 const RegionsMixin = types
   .model({
@@ -8,11 +10,10 @@ const RegionsMixin = types
     pid: types.optional(types.string, guidGenerator),
 
     score: types.maybeNull(types.number),
-    readonly: types.optional(types.boolean, false),
 
     hidden: types.optional(types.boolean, false),
 
-    parentID: types.optional(types.string, ""),
+    parentID: types.optional(types.string, ''),
 
     fromSuggestion: false,
 
@@ -26,6 +27,8 @@ const RegionsMixin = types
       'prediction-changed',
       'manual',
     ]), 'manual'),
+
+    item_index: types.maybeNull(types.number),
   })
   .volatile(() => ({
     // selected: false,
@@ -51,9 +54,7 @@ const RegionsMixin = types
     },
 
     get editable() {
-      if (self.locked === true) return false;
-
-      return self.readonly === false && self.annotation.editable === true;
+      throw new Error('Not implemented');
     },
 
     get isCompleted() {
@@ -70,6 +71,10 @@ const RegionsMixin = types
 
     get isReady() {
       return true;
+    },
+
+    get currentImageEntity() {
+      return self.parent.findImageEntity(self.item_index ?? 0);
     },
 
     getConnectedDynamicRegions(selfExcluding) {
@@ -93,7 +98,13 @@ const RegionsMixin = types
       },
 
       setShapeRef(ref) {
+        if (!ref) return;
         self.shapeRef = ref;
+      },
+
+      setItemIndex(index) {
+        if (!isDefined(index)) throw new Error('Index must be provided for', self);
+        self.item_index = index;
       },
 
       beforeDestroy() {
@@ -134,8 +145,8 @@ const RegionsMixin = types
         degree = (360 + degree) % 360;
         // transform origin is (w/2, w/2) for ccw rotation
         // (h/2, h/2) for cw rotation
-        const w = self.parent.stageWidth;
-        const h = self.parent.stageHeight;
+        const w = self.currentImageEntity.stageWidth;
+        const h = self.currentImageEntity.stageHeight;
         // actions: translate to fit origin, rotate, translate back
         //   const shift = size / 2;
         //   const newX = (x - shift) * cos + (y - shift) * sin + shift;
@@ -155,7 +166,7 @@ const RegionsMixin = types
       },
 
       convertXToPerc(x) {
-        return (x * 100) / self.parent.stageWidth;
+        return (x * 100) / self.currentImageEntity.stageWidth;
       },
 
       convertYToPerc(y) {
@@ -163,11 +174,11 @@ const RegionsMixin = types
       },
 
       convertHDimensionToPerc(hd) {
-        return (hd * (self.scaleX || 1) * 100) / self.parent.stageWidth;
+        return (hd * (self.scaleX || 1) * 100) / self.currentImageEntity.stageWidth;
       },
 
       convertVDimensionToPerc(vd) {
-        return (vd * (self.scaleY || 1) * 100) / self.parent.stageHeight;
+        return (vd * (self.scaleY || 1) * 100) / self.currentImageEntity.stageHeight;
       },
 
       // update region appearence based on it's current states, for
@@ -176,7 +187,7 @@ const RegionsMixin = types
       updateAppearenceFromState() {},
 
       serialize() {
-        console.error("Region class needs to implement serialize");
+        console.error('Region class needs to implement serialize');
       },
 
       toStateJSON() {
@@ -188,10 +199,10 @@ const RegionsMixin = types
             to_name: parent.name,
             source: parent.value,
             type: control.type,
-            parent_id: self.parentID === "" ? null : self.parentID,
+            parent_id: self.parentID === '' ? null : self.parentID,
           };
 
-          if (self.normalization) tree["normalization"] = self.normalization;
+          if (self.normalization) tree['normalization'] = self.normalization;
 
           return tree;
         };
@@ -234,7 +245,7 @@ const RegionsMixin = types
      * @param {boolean} tryToKeepStates try to keep states selected if such settings enabled
      */
       unselectRegion(tryToKeepStates = false) {
-        console.log("UNSELECT REGION", "you should not be here");
+        console.log('UNSELECT REGION', 'you should not be here');
         // eslint-disable-next-line no-constant-condition
         if (1) return;
         const annotation = self.annotation;
@@ -263,9 +274,9 @@ const RegionsMixin = types
       onClickRegion(ev) {
         const annotation = self.annotation;
 
-        if (!annotation.editable || self.isDrawing || annotation.isDrawing) return;
+        if (!self.isReadOnly() && (self.isDrawing || annotation.isDrawing)) return;
 
-        if (annotation.relationMode) {
+        if (!self.isReadOnly() && annotation.relationMode) {
           annotation.addRelation(self);
           annotation.stopRelationMode();
           annotation.regionStore.unselectAll();
@@ -280,8 +291,8 @@ const RegionsMixin = types
 
         if (additiveMode) {
           annotation.toggleRegionSelection(self);
-        } else {const wasNotSelected = !self.selected;
-
+        } else {
+          const wasNotSelected = !self.selected;
 
           if (wasNotSelected) {
             annotation.selectArea(self);
@@ -327,11 +338,11 @@ const RegionsMixin = types
           const env = getEnv(self);
 
           self.drawingTimeout = setTimeout(() => {
-            env.events.invoke("regionFinishedDrawing", self, self.getConnectedDynamicRegions(destroy));
+            env.events.invoke('regionFinishedDrawing', self, self.getConnectedDynamicRegions(destroy));
           }, timeout);
         }
       },
     };
   });
 
-export default types.compose(RegionsMixin, AnnotationMixin);
+export default types.compose(RegionsMixin, ReadOnlyRegionMixin, AnnotationMixin);

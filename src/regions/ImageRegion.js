@@ -1,7 +1,8 @@
-import { getParent, getRoot, types } from "mobx-state-tree";
-import { cloneNode } from "../core/Helpers";
-import { guidGenerator } from "../core/Helpers";
-import { AnnotationMixin } from "../mixins/AnnotationMixin";
+import { getParent, getRoot, types } from 'mobx-state-tree';
+import { cloneNode } from '../core/Helpers';
+import { guidGenerator } from '../core/Helpers';
+import { AnnotationMixin } from '../mixins/AnnotationMixin';
+import { ReadOnlyRegionMixin } from '../mixins/ReadOnlyMixin';
 
 // @todo remove file
 const RegionMixin = types
@@ -11,14 +12,12 @@ const RegionMixin = types
 
     score: types.maybeNull(types.number),
 
-    readonly: types.optional(types.boolean, false),
-
     hidden: types.optional(types.boolean, false),
 
     selected: types.optional(types.boolean, false),
     highlighted: types.optional(types.boolean, false),
 
-    parentID: types.optional(types.string, ""),
+    parentID: types.optional(types.string, ''),
   })
   .views(self => ({
     get perRegionStates() {
@@ -35,12 +34,12 @@ const RegionMixin = types
       return getParent(self);
     },
 
-    get editable() {
-      return self.readonly === false && self.annotation.editable === true;
+    get labelsState() {
+      return self.states.find(s => s.type.indexOf('labels') !== -1);
     },
 
-    get labelsState() {
-      return self.states.find(s => s.type.indexOf("labels") !== -1);
+    isReadOnly() {
+      return self.locked || self.readonly || self.annotation.readOnly();
     },
 
     hasLabelState(labelValue) {
@@ -109,7 +108,7 @@ const RegionMixin = types
     updateAppearenceFromState() {},
 
     serialize() {
-      console.error("Region class needs to implement serialize");
+      console.error('Region class needs to implement serialize');
     },
 
     toStateJSON() {
@@ -121,10 +120,10 @@ const RegionMixin = types
           to_name: parent.name,
           source: parent.value,
           type: control.type,
-          parent_id: self.parentID === "" ? null : self.parentID,
+          parent_id: self.parentID === '' ? null : self.parentID,
         };
 
-        if (self.normalization) tree["normalization"] = self.normalization;
+        if (self.normalization) tree['normalization'] = self.normalization;
 
         return tree;
       };
@@ -182,7 +181,7 @@ const RegionMixin = types
         // user is updating the label of the region, there might
         // be other states that depend on the value of the region,
         // therefore we need to recheck here
-        if (state.type.indexOf("labels") !== -1) {
+        if (state.type.indexOf('labels') !== -1) {
           const states = self.states.filter(s => s.whenlabelvalue !== null && s.whenlabelvalue !== undefined);
 
           states && states.forEach(s => self.states.remove(s));
@@ -230,8 +229,6 @@ const RegionMixin = types
     onClickRegion() {
       const annotation = self.annotation;
 
-      if (!annotation.editable) return;
-
       if (annotation.relationMode) {
         annotation.addRelation(self);
         annotation.stopRelationMode();
@@ -250,13 +247,13 @@ const RegionMixin = types
      * Remove region
      */
     deleteRegion() {
-      if (!self.annotation.editable) return;
+      if (self.annotation.isReadOnly()) return;
 
       self.unselectRegion();
 
       self.annotation.relationStore.deleteNodeRelation(self);
 
-      if (self.type === "polygonregion") {
+      if (self.type === 'polygonregion') {
         self.destroyRegion();
       }
 
@@ -278,4 +275,4 @@ const RegionMixin = types
     },
   }));
 
-export default types.compose(RegionMixin, AnnotationMixin);
+export default types.compose(RegionMixin, ReadOnlyRegionMixin, AnnotationMixin);
