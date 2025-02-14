@@ -1,18 +1,11 @@
-import { types } from "mobx-state-tree";
+import { types } from 'mobx-state-tree';
 
-import NormalizationMixin from "../mixins/Normalization";
-import RegionsMixin from "../mixins/Regions";
-import { VideoModel } from "../tags/object/Video";
-import { guidGenerator } from "../core/Helpers";
-import WithStatesMixin from "../mixins/WithStates";
-import { AreaMixin } from "../mixins/AreaMixin";
-
-export const interpolateProp = (start, end, frame, prop) => {
-  // @todo edge cases
-  const r = (frame - start.frame) / (end.frame - start.frame);
-
-  return start[prop] + (end[prop] - start[prop]) * r;
-};
+import { guidGenerator } from '../core/Helpers';
+import { AreaMixin } from '../mixins/AreaMixin';
+import NormalizationMixin from '../mixins/Normalization';
+import RegionsMixin from '../mixins/Regions';
+import { VideoModel } from '../tags/object/Video';
+import { FF_LEAP_187, isFF } from '../utils/feature-flags';
 
 export const onlyProps = (props, obj) => {
   return Object.fromEntries(props.map(prop => [
@@ -22,12 +15,15 @@ export const onlyProps = (props, obj) => {
 };
 
 const Model = types
-  .model("VideoRegionModel", {
+  .model('VideoRegionModel', {
     id: types.optional(types.identifier, guidGenerator),
     pid: types.optional(types.string, guidGenerator),
     object: types.late(() => types.reference(VideoModel)),
 
     sequence: types.frozen([]),
+  })
+  .preProcessSnapshot((snapshot) => {
+    return { ...snapshot, sequence: snapshot.sequence || snapshot.value.sequence };
   })
   .volatile(() => ({
     hideable: true,
@@ -42,7 +38,7 @@ const Model = types
     },
 
     getShape() {
-      throw new Error("Method getShape be implemented on a shape level");
+      throw new Error('Method getShape be implemented on a shape level');
     },
 
     getVisibility() {
@@ -51,7 +47,15 @@ const Model = types
   }))
   .actions(self => ({
     updateShape() {
-      throw new Error("Method updateShape must be implemented on a shape level");
+      throw new Error('Method updateShape must be implemented on a shape level');
+    },
+
+    onSelectInOutliner() {
+      if (isFF(FF_LEAP_187)) {
+        // skip video to the first frame of this region
+        // @todo hidden/disabled timespans?
+        self.object.setFrame(self.sequence[0].frame);
+      }
     },
 
     serialize() {
@@ -67,13 +71,11 @@ const Model = types
         }),
       };
 
-      if (self.labels?.length) value.labels = self.labels;
-
       return { value };
     },
 
     toggleLifespan(frame) {
-      const keypoint = self.closestKeypoint(frame);
+      const keypoint = self.closestKeypoint(frame, true);
 
       if (keypoint) {
         const index = self.sequence.indexOf(keypoint);
@@ -90,13 +92,12 @@ const Model = types
       const sequence = Array.from(self.sequence);
       const closestKeypoint = self.closestKeypoint(frame);
       const newKeypoint = {
-        ...(closestKeypoint ?? {
+        ...(self.getShape(frame) ?? closestKeypoint ?? {
           x: 0,
           y: 0,
-          enabled: true,
         }),
+        enabled: closestKeypoint?.enabled ?? true,
         frame,
-        rotation: 0,
       };
 
       sequence.push(newKeypoint);
@@ -126,7 +127,7 @@ const Model = types
       return false;
     },
 
-    closestKeypoint(targetFrame) {
+    closestKeypoint(targetFrame, onlyPrevious = false) {
       const seq = self.sequence;
       let result;
 
@@ -134,7 +135,7 @@ const Model = types
 
       result = keypoints[keypoints.length - 1];
 
-      if (!result) {
+      if (!result && onlyPrevious !== true) {
         result = seq.find(({ frame }) => frame >= targetFrame);
       }
 
@@ -143,8 +144,7 @@ const Model = types
   }));
 
 const VideoRegion = types.compose(
-  "VideoRegionModel",
-  WithStatesMixin,
+  'VideoRegionModel',
   RegionsMixin,
   AreaMixin,
   NormalizationMixin,

@@ -1,10 +1,13 @@
-import { FC, MouseEvent } from "react";
-import { ViewTypes } from "./Views";
-import * as Controls from "./SideControls";
+import { FC, MouseEvent } from 'react';
+import { ViewTypes } from './Views';
+import * as Controls from './SideControls';
 
-export type TimelineControls = Partial<Record<keyof typeof Controls, boolean>>
+export type TimelineControls = Partial<Record<keyof typeof Controls, boolean>> & {
+  ZoomControl: boolean,
+  SpeedControl: boolean,
+}
 
-export interface TimelineProps<D extends ViewTypes = "frames"> {
+export interface TimelineProps<D extends ViewTypes = 'frames'> {
   regions: any[];
   length: number;
   position: number;
@@ -22,11 +25,16 @@ export interface TimelineProps<D extends ViewTypes = "frames"> {
   allowViewCollapse?: boolean;
   allowSeek?: boolean;
   hopSize?: number;
+  altHopSize?: number;
   data?: any;
   controlsOnTop?: boolean;
   controls?: TimelineControls;
+  customControls?: TimelineCustomControls[];
   onReady?: (data: Record<string, any>) => void;
-  onPlayToggle: (playing: boolean) => void;
+  onPlay?: () => void;
+  onPause?: () => void;
+  onFinished?: () => void;
+  onSeek?: (position: number) => void;
   onPositionChange: (value: number) => void;
   onToggleVisibility?: (id: string, visibility: boolean) => void;
   onAddRegion?: (region: Record<string, any>) => any;
@@ -37,7 +45,7 @@ export interface TimelineProps<D extends ViewTypes = "frames"> {
   onVolumeChange?: (volume: number) => void;
   onFullscreenToggle?: (fullscreen: boolean) => void;
   onSpeedChange?: (speed: number) => void;
-  formatPosition?: (position: number, fps: number) => string;
+  formatPosition?: (options: TimelineControlsFormatterOptions) => string;
 }
 
 export interface TimelineViewProps {
@@ -50,18 +58,23 @@ export interface TimelineViewProps {
   speed?: number;
   volume?: number;
   regions: TimelineRegion[];
+  leftOffset?: number;
+  controls?: TimelineControls;
   onScroll: (position: number) => void;
-  onChange: (position: number) => void;
+  onPositionChange: (position: number) => void;
   onResize: (position: number) => void;
-  onPlayToggle?: TimelineProps["onPlayToggle"];
-  onToggleVisibility?: TimelineProps["onToggleVisibility"];
-  onReady?: TimelineProps["onReady"];
-  onZoom?: TimelineProps["onZoom"];
-  onAddRegion?: TimelineProps["onAddRegion"];
-  onDeleteRegion?: TimelineProps["onDeleteRegion"];
-  onSelectRegion?: TimelineProps["onSelectRegion"];
-  onVolumeChange?: TimelineProps["onVolumeChange"];
-  onSpeedChange?: TimelineProps["onSpeedChange"];
+  onPlay?: TimelineProps['onPlay'];
+  onPause?: TimelineProps['onPause'];
+  onSeek?: TimelineProps['onSeek'];
+  onFinished?: TimelineProps['onFinished'];
+  onToggleVisibility?: TimelineProps['onToggleVisibility'];
+  onReady?: TimelineProps['onReady'];
+  onZoom?: TimelineProps['onZoom'];
+  onAddRegion?: TimelineProps['onAddRegion'];
+  onDeleteRegion?: TimelineProps['onDeleteRegion'];
+  onSelectRegion?: TimelineProps['onSelectRegion'];
+  onVolumeChange?: TimelineProps['onVolumeChange'];
+  onSpeedChange?: TimelineProps['onSpeedChange'];
 }
 
 export interface TimelineRegion {
@@ -84,6 +97,8 @@ export interface TimelineContextValue {
   regions: TimelineRegion[];
   step: number;
   playing: boolean;
+  visibleWidth: number;
+  seekOffset: number;
   settings?: TimelineSettings;
   data?: any;
 }
@@ -100,13 +115,18 @@ export type TimelineSettings = {
   playpauseHotkey?: string,
   stepAltBack?: string,
   stepAltForward?: string,
+  skipToBeginning?: string,
+  skipToEnd?: string,
+  hopBackward?: string,
+  hopForward?: string,
   fastTravelSize?: TimelineStepFunction,
   stepSize?: TimelineStepFunction,
+  leftOffset?: number,
 }
 
 export type TimelineStepFunction = (length: number, position: number, regions: TimelineRegion[], direction: -1 | 1) => number;
 
-export interface TimelineExtraControls<A extends string, D extends any> {
+export interface TimelineExtraControls<A extends string, D> {
   onAction?: <T extends Element>(e: MouseEvent<T>, action: A, data?: D) => void;
 }
 
@@ -130,27 +150,52 @@ export interface TimelineControlsProps {
   collapsed: boolean;
   fullscreen: boolean;
   volume?: number;
+  speed?: number;
+  zoom?: number;
+  amp?: number;
+  duration?: number;
   disableFrames?: boolean;
   extraControls?: JSX.Element | null;
   allowFullscreen?: boolean;
   allowViewCollapse?: boolean;
-  controls?: TimelineProps["controls"];
-  onRewind: () => void;
-  onForward: () => void;
+  controls?: TimelineProps['controls'];
+  altHopSize?: TimelineProps['altHopSize'];
+  customControls?: TimelineCustomControls[];
+  mediaType: string;
+  layerVisibility?: Map<string, boolean>;
+  onRewind: (steps?: number) => void;
+  onForward: (steps?: number) => void;
   onPositionChange: (position: number) => void;
   onToggleCollapsed: (collapsed: boolean) => void;
   onStepBackward: TimelineControlsStepHandler;
   onStepForward: TimelineControlsStepHandler;
-  formatPosition?: TimelineProps["formatPosition"];
-  onPlayToggle: TimelineProps["onPlayToggle"];
-  onFullScreenToggle: TimelineProps["onFullscreenToggle"];
-  onVolumeChange: TimelineProps["onVolumeChange"];
+  formatPosition?: TimelineProps['formatPosition'];
+  onPlay?: TimelineProps['onPlay'];
+  onPause?: TimelineProps['onPause'];
+  onFullScreenToggle: TimelineProps['onFullscreenToggle'];
+  onVolumeChange: TimelineProps['onVolumeChange'];
+  onSpeedChange: TimelineProps['onSpeedChange'];
+  onZoom: TimelineProps['onZoom'];
+  onAmpChange: (amp: number) => void;
+  toggleVisibility?: (layerName: string, isVisible: boolean) => void;
+}
+
+export interface TimelineCustomControls {
+  position: 'left' | 'right' | 'leftCenter' | 'rightCenter';
+  component: JSX.Element | (() => JSX.Element);
 }
 
 export interface TimelineSideControlProps {
   position?: number;
   length?: number;
   volume?: number;
-  onPositionChange?: TimelineControlsProps["onPositionChange"];
-  onVolumeChange?: TimelineProps["onVolumeChange"];
+  onPositionChange?: TimelineControlsProps['onPositionChange'];
+  onVolumeChange?: TimelineProps['onVolumeChange'];
+}
+
+export type TimelineControlsFormatterOptions = {
+  time: number,
+  position: number,
+  fps: number,
+  length: number,
 }
