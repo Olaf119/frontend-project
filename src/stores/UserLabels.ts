@@ -16,7 +16,6 @@ const UserLabels = types
   })
   .actions(self => ({
     addLabel(control: string, path: string[]) {
-      const label: UserLabel = { path, origin: 'session' };
       const labels = [...(self.controls[control] ?? []), label];
 
       self.controls = { ...self.controls, [control]: labels };

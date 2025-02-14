@@ -1,6 +1,6 @@
 import { DEFAULT_PANEL_HEIGHT, DEFAULT_PANEL_WIDTH } from '../../constants';
 import { JoinOrder, PanelBBox, Side } from '../types';
-import { determineDroppableArea, determineLeftOrRight, findPanelViewByName, findZIndices, getSnappedHeights, joinPanelColumns, redistributeHeights, setActive, setActiveDefaults, splitPanelColumns, stateAddedTab, stateRemovedTab, stateRemovePanelEmptyViews } from '../utils';
+
 
 
 const dummyPanels: Record<string, PanelBBox> = {
@@ -308,7 +308,7 @@ describe('splitPanelColumns', () => {
   const panel3 = 'panel3';
   const totalHeight = 1000;
   const panelAttributes = {
-    panelViews:[{ name: 'view1', component: () => null }],
+    panelViews: [{ name: 'view1', component: () => null }],
     order: 0,
     width: DEFAULT_PANEL_WIDTH,
     height: DEFAULT_PANEL_HEIGHT,
@@ -453,7 +453,7 @@ describe('joinPanelColumns', () => {
       panel3,
       panel4: {
         width: 300,
-        zIndex:10,
+        zIndex: 10,
         height: 400,
         top: 0,
         left: 500,
@@ -474,7 +474,7 @@ describe('joinPanelColumns', () => {
       panel3,
       panel4: {
         width: 250,
-        zIndex:10,
+        zIndex: 10,
         height: 400,
         top: 0,
         left: 500,
@@ -647,14 +647,14 @@ describe('findZIndices', () => {
 
 describe('findPanelViewByName', () => {
   const state = {
-    'view1-view2-view3' : {
+
       panelViews: [
         { name: 'view1' },
         { name: 'view2' },
         { name: 'view3' },
       ],
     },
-    'view4-view5' : {
+
       panelViews: [
         { name: 'View 4' },
         { name: 'View 5' },
@@ -712,4 +712,3 @@ describe('findPanelViewByName', () => {
 
     expect(result).toBeUndefined();
   });
-});

@@ -93,10 +93,6 @@ export const AudioModel = types.compose(
         return getRoot(self);
       },
 
-      get regs() {
-        return self.annotation?.regionStore.regions.filter(r => r.object === self) || [];
-      },
-
       states() {
         return self.annotation.toNames.get(self.name);
       },
@@ -216,7 +212,7 @@ export const AudioModel = types.compose(
           states,
         });
 
-        r._ws_region = wsRegion;
+        r.setWSRegion(wsRegion);
 
         self.regions.push(r);
         self.annotation.addRegion(r);
@@ -244,7 +240,7 @@ export const AudioModel = types.compose(
         if (find_r) {
           find_r.applyCSSClass(wsRegion);
 
-          find_r._ws_region = wsRegion;
+          find_r.setWSRegion(wsRegion);
           return find_r;
         }
 
@@ -259,7 +255,7 @@ export const AudioModel = types.compose(
         const labels = { [control.valueType]: control.selectedValues() };
         const r = self.annotation.createResult(wsRegion, labels, control, self);
 
-        r._ws_region = wsRegion;
+        r.setWSRegion(wsRegion);
         r.updateAppearenceFromState();
         return r;
       },
@@ -292,7 +288,7 @@ export const AudioModel = types.compose(
 
         const r = self._ws.addRegion(region.wsRegionOptions);
 
-        region._ws_region = r;
+        region.setWSRegion(r);
         region.updateAppearenceFromState();
       },
 
