@@ -1,104 +1,52 @@
-// eslint-disable-next-line
-// @ts-ignore
-import { info } from '../Common/Utils';
-import { BaseAudioDecoder } from './BaseAudioDecoder';
+import { AudioClassification } from '../examples/audio_classification';
+import { AudioRegions } from '../examples/audio_regions';
+import { TranscribeAudio } from '../examples/transcribe_audio';
+import { VideoRectangles } from '../examples/video_bboxes';
+import { VideoClassification } from '../examples/video';
+import { VideoAudio } from '../examples/video_audio';
+import { AudioVideoParagraph } from '../examples/audio_video_paragraphs';
 
+/**
+ * Image
+ */
+import { ImageBbox } from '../examples/image_bbox';
+import { ImageList } from '../examples/image_list';
+import { ImageBboxLarge } from '../examples/image_bbox_large';
+import { ImageKeyPoint } from '../examples/image_keypoints';
+import { ImageMultilabel } from '../examples/image_multilabel';
+import { ImageEllipselabels } from '../examples/image_ellipses';
+import { ImageOCR } from '../examples/image_ocr';
+import { ImagePolygons } from '../examples/image_polygons';
+import { ImageSegmentation } from '../examples/image_segmentation';
+import { ImageTools } from '../examples/image_tools';
+import { ImageMagicWand } from '../examples/image_magic_wand';
 
-export class WebAudioDecoder extends BaseAudioDecoder {
-  private arraybuffer?: ArrayBuffer;
-  private context?: OfflineAudioContext;
+/**
+ * HTML
+ */
+import { HTMLDocument } from '../examples/html_document';
+import { Taxonomy } from '../examples/taxonomy';
+import { TaxonomyLarge } from '../examples/taxonomy_large';
+import { TaxonomyLargeInline } from '../examples/taxonomy_large_inline';
 
-  /**
-   * Initialize the decoder if it has not already been initialized.
-   */
-  async init(arraybuffer: ArrayBuffer) {
-    this.arraybuffer = arraybuffer;
+/**
+ * RichText (HTML or plain text)
+ */
+import { RichTextHtml } from '../examples/rich_text_html';
+import { RichTextPlain } from '../examples/rich_text_plain';
+import { RichTextPlainRemote } from '../examples/rich_text_plain_remote';
 
-    info('decode:worker:ready', this.src);
-  }
+/**
+ * Different
+ */
+import { DateTime } from '../examples/datetime';
+import { Pairwise } from '../examples/pairwise';
+import { Repeater } from '../examples/repeater';
+import { Table } from '../examples/table';
+import { TableCsv } from '../examples/table_csv';
+import { Ranker } from '../examples/ranker';
+import { Buckets } from '../examples/ranker_buckets';
 
-  /**
-   * Decode the audio file using the WebAudio API.
-   */
-  async decode(options?: { multiChannel?: boolean }): Promise<void> {
-    // If the worker has cached data we can skip the decode step
-    if (this.sourceDecoded) {
-      info('decode:cached', this.src);
-      return;
-    }
-    if (this.sourceDecodeCancelled) {
-      throw new Error('WebAudioDecoder decode cancelled and contains no data, did you call decoder.renew()?');
-    }
-    // The decoding process is already in progress, so wait for it to finish
-    if (this.decodingPromise) {
-      info('decode:inprogress', this.src);
-      return this.decodingPromise;
-    }
-    if (!this.arraybuffer) throw new Error('WebAudioDecoder not initialized, did you call decoder.init()?');
-
-    info('decode:start', this.src);
-
-    // Generate a unique id for this decode operation
-    this.decodeId = Date.now();
-    // This is a shared promise which will be observed by all instances of the same source
-    this.decodingPromise = new Promise(resolve => (this.decodingResolve = resolve as any));
-
-    try {
-      const buffer = await new Promise((resolve, reject) => {
-        if (!this.context) {
-          this.context = this.createOfflineAudioContext();
-        }
-        if (!this.context || !this.arraybuffer) return reject(new Error('WebAudioDecoder not initialized, did you call decoder.init()?'));
-        // Safari doesn't support promise based decodeAudioData by default
-        if ('webkitAudioContext' in window) {
-          this.context?.decodeAudioData(
-            this.arraybuffer,
-            data => resolve(data),
-            err => reject(err),
-          );
-        } else {
-          this.context?.decodeAudioData(this.arraybuffer).then(
-            resolve,
-          ).catch(
-            reject,
-          );
-        }
-      }) as AudioBuffer;
-
-      this._channelCount = options?.multiChannel ? buffer.numberOfChannels : 1;
-      this._sampleRate = buffer.sampleRate;
-      this._duration = buffer.duration;
-
-      const chunks = Array.from({ length: this._channelCount }).map(() => Array.from({ length: 1 }) as Float32Array[]);
-
-      chunks.forEach((_, index) => {
-        chunks[index] = [buffer.getChannelData(index)];
-      });
-
-      this.chunks = chunks;
-
-      info('decode:complete', this.src);
-    } finally {
-      this.dispose();
-    }
-  }
-
-  /**
-   * Dispose and free up resources.
-   */
-  protected dispose() {
-    delete this.arraybuffer;
-    delete this.context;
-
-    this.cleanupResolvers();
-  }
-
-  private createOfflineAudioContext(sampleRate?: number) {
-    if (!(window as any).WebAudioOfflineAudioContext) {
-      (window as any).WebAudioOfflineAudioContext = new (window.OfflineAudioContext ||
-                (window as any).webkitOfflineAudioContext)(1, 2, sampleRate ?? this.sampleRate);
-    }
-    return (window as any).WebAudioOfflineAudioContext;
-  }
-}
-
+import { TimeSeries } from '../examples/timeseries';
+import { TimeSeriesSingle } from '../examples/timeseries_single';
+import { ClassificationMixed } from '../examples/classification_mixed';
