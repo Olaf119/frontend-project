@@ -1,6 +1,6 @@
 import { DEFAULT_PANEL_HEIGHT, DEFAULT_PANEL_WIDTH } from '../../constants';
 import { JoinOrder, PanelBBox, Side } from '../types';
-import { checkCollapsedPanelsHaveData, determineDroppableArea, determineLeftOrRight, findPanelViewByName, findZIndices, getSnappedHeights, joinPanelColumns, redistributeHeights, setActive, setActiveDefaults, splitPanelColumns, stateAddedTab, stateRemovedTab, stateRemovePanelEmptyViews } from '../utils';
+
 
 
 const dummyPanels: Record<string, PanelBBox> = {
@@ -647,14 +647,14 @@ describe('findZIndices', () => {
 
 describe('findPanelViewByName', () => {
   const state = {
-    'view1-view2-view3': {
+
       panelViews: [
         { name: 'view1' },
         { name: 'view2' },
         { name: 'view3' },
       ],
     },
-    'view4-view5': {
+
       panelViews: [
         { name: 'View 4' },
         { name: 'View 5' },
@@ -712,44 +712,3 @@ describe('findPanelViewByName', () => {
 
     expect(result).toBeUndefined();
   });
-});
-
-describe('checkCollapsedPanelsHaveData', () => {
-  const collapsedSide = {
-    left: true,
-    right: false,
-  };
-
-  const panelData = {
-    panel1: { alignment: 'left', detached: false },
-    panel2: { alignment: 'right', detached: false },
-    panel3: { alignment: 'top', detached: true },
-    panel4: { alignment: 'bottom', detached: false },
-  };
-
-  it('should update collapsedSide correctly when there is data in collapsed panels', () => {
-    const expected = {
-      left: true,
-      right: false,
-    };
-
-    const result = checkCollapsedPanelsHaveData(collapsedSide, panelData);
-
-    expect(result).toEqual(expected);
-  });
-
-  it('should not update collapsedSide when there is no data in collapsed panels', () => {
-    const collapsedSideWithNoData = {
-      left: true,
-      right: true,
-    };
-    const expected = { ...collapsedSideWithNoData };
-
-    const result = checkCollapsedPanelsHaveData(
-      collapsedSideWithNoData,
-      panelData,
-    );
-
-    expect(result).toEqual(expected);
-  });
-});

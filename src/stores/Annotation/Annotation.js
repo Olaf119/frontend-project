@@ -665,9 +665,7 @@ export const Annotation = types
       onSnapshot(self.areas, self.autosave);
     }),
 
-    async saveDraft(params) {
-      // There is no draft to save as it was already saved as an annotation
-      if (self.submissionStarted) return;
+
       // if this is now a history item or prediction don't save it
       if (!self.editable) return;
 
@@ -682,12 +680,7 @@ export const Annotation = types
       return self.store.submitDraft(self, params).then((res) => {
         self.onDraftSaved(res);
 
-        return res;
-      });
-    },
 
-    submissionInProgress() {
-      self.submissionStarted = Date.now();
     },
 
     saveDraftImmediately() {

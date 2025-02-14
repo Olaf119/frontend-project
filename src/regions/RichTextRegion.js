@@ -40,6 +40,7 @@ const Model = types
   .volatile(() => ({
     hideable: true,
     cachedRange: null,
+    _range: null,
   }))
   .views(self => ({
     get parent() {
@@ -59,6 +60,10 @@ const Model = types
       } catch (e) {
         console.warn(e);
       }
+    },
+
+    setRange(range) {
+      self._range = range;
     },
 
     serialize() {
@@ -118,6 +123,10 @@ const Model = types
       }
 
       return res;
+    },
+
+    updateText(text) {
+      self.text = text;
     },
 
     // text regions have only start/end, so we should update start/endOffsets with these values
