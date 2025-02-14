@@ -1,134 +1,52 @@
-import { Destructable } from '../Common/Destructable';
-import { Waveform } from '../Waveform';
-import { WaveformAudio, WaveformAudioOptions } from './WaveformAudio';
+import { AudioClassification } from '../examples/audio_classification';
+import { AudioRegions } from '../examples/audio_regions';
+import { TranscribeAudio } from '../examples/transcribe_audio';
+import { VideoRectangles } from '../examples/video_bboxes';
+import { VideoClassification } from '../examples/video';
+import { VideoAudio } from '../examples/video_audio';
+import { AudioVideoParagraph } from '../examples/audio_video_paragraphs';
 
-export type Options = {
-  src: string,
-}
+/**
+ * Image
+ */
+import { ImageBbox } from '../examples/image_bbox';
+import { ImageList } from '../examples/image_list';
+import { ImageBboxLarge } from '../examples/image_bbox_large';
+import { ImageKeyPoint } from '../examples/image_keypoints';
+import { ImageMultilabel } from '../examples/image_multilabel';
+import { ImageEllipselabels } from '../examples/image_ellipses';
+import { ImageOCR } from '../examples/image_ocr';
+import { ImagePolygons } from '../examples/image_polygons';
+import { ImageSegmentation } from '../examples/image_segmentation';
+import { ImageTools } from '../examples/image_tools';
+import { ImageMagicWand } from '../examples/image_magic_wand';
 
-export class MediaLoader extends Destructable {
-  private wf: Waveform;
-  private audio?: WaveformAudio | null;
-  private loaded = false;
-  private options: Options;
-  private cancel: () => void;
+/**
+ * HTML
+ */
+import { HTMLDocument } from '../examples/html_document';
+import { Taxonomy } from '../examples/taxonomy';
+import { TaxonomyLarge } from '../examples/taxonomy_large';
+import { TaxonomyLargeInline } from '../examples/taxonomy_large_inline';
 
-  duration = 0;
-  sampleRate = 0;
-  loadingProgressType: 'determinate' | 'indeterminate';
+/**
+ * RichText (HTML or plain text)
+ */
+import { RichTextHtml } from '../examples/rich_text_html';
+import { RichTextPlain } from '../examples/rich_text_plain';
+import { RichTextPlainRemote } from '../examples/rich_text_plain_remote';
 
-  constructor(wf: Waveform, options: Options) {
-    super();
-    this.wf = wf;
-    this.options = options;
-    this.cancel = () => {};
-    this.loadingProgressType = 'determinate';
-  }
+/**
+ * Different
+ */
+import { DateTime } from '../examples/datetime';
+import { Pairwise } from '../examples/pairwise';
+import { Repeater } from '../examples/repeater';
+import { Table } from '../examples/table';
+import { TableCsv } from '../examples/table_csv';
+import { Ranker } from '../examples/ranker';
+import { Buckets } from '../examples/ranker_buckets';
 
-  reset() {
-    this.cancel();
-    this.loaded = false;
-    this.loadingProgressType = 'determinate';
-  }
-
-  async decodeAudioData(arrayBuffer: ArrayBuffer) {
-    if (!this.audio?.context || this.isDestroyed) return null;
-
-    return await this.audio.decodeAudioData(arrayBuffer).then((buffer) => {
-      if (this.isDestroyed) return null;
-      return buffer;
-    });
-  }
-
-  async load(options: WaveformAudioOptions): Promise<WaveformAudio| null> {
-    if (this.isDestroyed || this.loaded) {
-      return Promise.resolve(null);
-    }
-
-    const audio = this.createAnalyzer(options);
-    const xhr = await this.performRequest(this.options.src);
-
-    if (xhr.status === 200 && xhr.response) {
-      const playAudio = (buffer: AudioBuffer) => {
-        this.duration = buffer.duration;
-        this.sampleRate = audio.sampleRate ?? buffer.sampleRate;
-        this.loaded = true;
-        audio.buffer = buffer;
-        audio.connect();
-        return audio;
-      };
-
-      try {
-        if (!audio.context) {
-          return Promise.resolve(null);
-        }
-
-        return this.decodeAudioData(xhr.response).then((buffer) => {
-          if (buffer) {
-            return playAudio(buffer);
-          }
-          return null;
-        });
-      } catch (err) {
-      // TODO: Handle properly (exiquio)
-      // NOTE: error is being received
-        console.error('An audio decoding error occurred', err);
-      }
-    }
-
-    return null;
-  }
-
-  destroy() {
-    if (this.isDestroyed) return;
-
-    super.destroy();
-    this.reset();
-
-    if (this.audio) {
-      this.audio.destroy();
-      this.audio = null;
-    }
-  }
-
-  private async performRequest(url: string): Promise<XMLHttpRequest> {
-    const xhr = new XMLHttpRequest();
-
-    this.cancel = () => {
-      xhr?.abort();
-      this.cancel = () => {};
-    };
-
-    return new Promise<XMLHttpRequest>((resolve, reject) => {
-      xhr.responseType = 'arraybuffer';
-
-      xhr.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          this.loadingProgressType = 'determinate';
-          this.wf.setLoadingProgress(e.loaded, e.total);
-        } else {
-          this.loadingProgressType = 'indeterminate';
-          this.wf.setLoadingProgress(e.loaded, -1);
-        }
-      });
-
-      xhr.addEventListener('load', async () => {
-        this.wf.setLoadingProgress(undefined, undefined, true);
-        resolve(xhr);
-      });
-
-      xhr.addEventListener('error', () => {
-        reject(xhr);
-      });
-
-      xhr.open('GET', url);
-      xhr.send();
-    });
-  }
-
-  private createAnalyzer(options: WaveformAudioOptions): WaveformAudio {
-    if (this.audio) return this.audio;
-
-    return this.audio = new WaveformAudio(options);
-  }
-}
+import { TimeSeries } from '../examples/timeseries';
+import { TimeSeriesSingle } from '../examples/timeseries_single';
+import { ClassificationMixed } from '../examples/classification_mixed';

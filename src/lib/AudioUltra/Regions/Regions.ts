@@ -1,5 +1,13 @@
 import { rgba, RgbaColorArray } from '../Common/Color';
-import { clamp, defaults, findLast, getCursorPositionX, getCursorPositionY, isInRange, pixelsToTime } from '../Common/Utils';
+import {
+  clamp,
+  defaults,
+  findLast,
+  getCursorPositionX,
+  getCursorPositionY,
+  isInRange,
+  pixelsToTime
+} from '../Common/Utils';
 import { CursorSymbol } from '../Cursor/Cursor';
 import { LayerGroup } from '../Visual/LayerGroup';
 import { Visualizer } from '../Visual/Visualizer';
@@ -29,11 +37,12 @@ export class Regions {
   private hoveredRegions = new Set<Region | Segment>();
   private defaultColor = rgba('#787878');
   private drawingColor = rgba('#787878');
+  private labels: string[] | undefined;
   private createable = true;
   private updateable = true;
   private deleteable = true;
   private drawableTarget = Segment;
-
+  showLabels = false;
   layerGroup: LayerGroup;
 
   constructor(options: RegionsOptions, waveform: Waveform, visualizer: Visualizer) {
@@ -41,11 +50,12 @@ export class Regions {
     this.visualizer = visualizer;
     this.initialRegions = options?.regions ?? [];
     this.defaultColor = options?.defaultColor ? rgba(options.defaultColor) : this.defaultColor;
+    this.labels = undefined;
     this.createable = options?.createable ?? this.createable;
     this.updateable = options?.updateable ?? this.updateable;
     this.deleteable = options?.deleteable ?? this.deleteable;
     this.layerGroup = this.visualizer.getLayer('regions') as LayerGroup;
-
+    this.showLabels = this.waveform.params.showLabels ?? false;
     this.init();
   }
 
@@ -73,7 +83,12 @@ export class Regions {
 
   renderAll() {
     this.layerGroup.clear();
-    this.regions.forEach(region => region.render());
+    const currentTime = this.waveform.currentTime;
+
+    this.regions.forEach(region => {
+      region.highlighted = (region.start <= currentTime && region.end >= currentTime);
+      region.render();
+    });
   }
 
   regionDrawableTarget() {
@@ -90,12 +105,20 @@ export class Regions {
 
   clearSegments(selectedOnly = false) {
     this.regions = this.regions.filter(region => {
-      if (!region.isRegion && (!selectedOnly || region.selected)) {
+      if (!region.isRegion && (!selectedOnly || region.selected) && !region.external) {
         region.destroy();
         return false;
       }
       return true;
     });
+  }
+
+  addRegions(regions: RegionOptions[], render = true) {
+    regions.forEach(region => this.addRegion(region, false));
+
+    if (render) {
+      this.redraw();
+    }
   }
 
   addRegion(options: RegionOptions, render = true) {
@@ -118,6 +141,38 @@ export class Regions {
 
   findRegion(id: string) {
     return this.regions.find(region => region.id === id);
+  }
+
+  convertToRegion(id: string, labels: string[], render = true): Region {
+    let region = this.findRegion(id) as Region;
+
+    const regionIndex = this.regions.findIndex(region => region.id === id);
+
+    region = new Region({ ...region.options, labels }, this.waveform, this.visualizer, this);
+
+    this.regions[regionIndex] = region;
+
+    if (render) {
+      this.redraw();
+    }
+
+    return region;
+  }
+
+  convertToSegment(id: string, render = true): Segment {
+    let segment = this.findRegion(id) as Segment;
+
+    const regionIndex = this.regions.findIndex(region => region.id === id);
+
+    segment = new Segment(segment.options, this.waveform, this.visualizer, this);
+
+    this.regions[regionIndex] = segment;
+
+    if (render) {
+      this.redraw();
+    }
+
+    return segment;
   }
 
   updateRegion(options: RegionOptions, render = true) {
@@ -153,6 +208,12 @@ export class Regions {
     }
   }
 
+  bringRegionToFront(regionId: string) {
+    const originalIndex = this.regions.findIndex(reg => reg.id === regionId);
+
+    this.regions.push(...this.regions.splice(originalIndex, 1));
+  }
+
   destroy() {
     const { container } = this.visualizer;
 
@@ -174,8 +235,21 @@ export class Regions {
     this.drawingColor = rgba(color);
   }
 
+  updateLabelVisibility(visible: boolean) {
+    this.showLabels = visible;
+    this.redraw();
+  }
+
+  setLabels(labels?: string[]) {
+    if (labels) this.labels = labels;
+  }
+
   resetDrawingColor() {
     this.drawingColor = this.defaultColor.clone();
+  }
+
+  resetLabels() {
+    this.labels = undefined;
   }
 
   get list() {
@@ -184,6 +258,14 @@ export class Regions {
 
   get selected() {
     return this.regions.filter(region => region.selected);
+  }
+
+  get timelineRegions() {
+    return this.regions.filter(region => region.showInTimeline);
+  }
+
+  get visible() {
+    return this.regions.filter(region => region.visible);
   }
 
   isOverrideKeyPressed(e: MouseEvent) {
@@ -237,6 +319,7 @@ export class Regions {
         end,
         color: this.drawingColor.toString(),
         selected: false,
+        labels: this.labels,
       });
 
       if (autoPlayNewSegments && !region.isRegion) {
@@ -327,7 +410,6 @@ export class Regions {
     if (this.layerGroup.isVisible && region?.updateable) {
       e.preventDefault();
       e.stopPropagation();
-
       region.invoke('mouseDown', [region, e]);
     }
   };
@@ -346,7 +428,7 @@ export class Regions {
 
     if (e.target && mainLayer?.canvas?.contains(e.target)) {
       const region = this.findRegionUnderCursor(e);
-  
+
       if (this.layerGroup.isVisible && region) {
         region.invoke('click', [region, e]);
       }
@@ -354,7 +436,7 @@ export class Regions {
   };
 
   private findRegionUnderCursor(e: MouseEvent) {
-    const region = findLast(this.regions, region => {
+    const region = findLast(this.visible, region => {
       return this.cursorInRegion(e, region);
     });
 

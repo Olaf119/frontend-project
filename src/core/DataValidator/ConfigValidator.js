@@ -248,6 +248,22 @@ const validateAttributes = (child, model, fieldsToSkip) => {
 };
 
 /**
+ * Validate perRegion restrictions
+ * @param {Object} child
+ */
+const validatePerRegion = (child) => {
+  const validationResult = [];
+
+  // PerItem and PerRegion are incompatible but PerRegion is more prioritized mode
+  if (child.perregion && child.peritem) {
+    validationResult.push(errorBuilder.generalError('Attribute <b>perItem</b> is incompatible with attribute <b>perRegion</b>. ' +
+      'They define two different modes. However <b>perRegion</b> works fine even with multi-item mode of object tags.'));
+  }
+
+  return validationResult;
+};
+
+/**
  * Convert MST type to a human-readable string
  * @param {import("mobx-state-tree").IType} type
  */
@@ -268,23 +284,29 @@ export class ConfigValidator {
     const validationResult = [];
 
     for (const child of flatTree) {
-      const model = Registry.getModelByTag(child.type);
-      // Validate name attribute
-      const nameValidation = validateNameTag(child, model);
+      try {
+        const model = Registry.getModelByTag(child.type);
+        // Validate name attribute
+        const nameValidation = validateNameTag(child, model);
 
-      if (nameValidation !== null) validationResult.push(nameValidation);
+        if (nameValidation !== null) validationResult.push(nameValidation);
 
-      // Validate toName attribute
-      const toNameValidation = validateToNameTag(child, model, flatTree);
+        // Validate toName attribute
+        const toNameValidation = validateToNameTag(child, model, flatTree);
 
-      if (toNameValidation !== null) validationResult.push(toNameValidation);
+        if (toNameValidation !== null) validationResult.push(toNameValidation);
 
-      // Validate by parentUnexpected parent tag
-      const parentValidation = validateParentTag(child, model);
+        // Validate by parentUnexpected parent tag
+        const parentValidation = validateParentTag(child, model);
 
-      if (parentValidation !== null) validationResult.push(parentValidation);
+        if (parentValidation !== null) validationResult.push(parentValidation);
 
-      validationResult.push(...validateAttributes(child, model, propertiesToSkip));
+        validationResult.push(...validatePerRegion(child));
+
+        validationResult.push(...validateAttributes(child, model, propertiesToSkip));
+      } catch (e) {
+        validationResult.push(errorBuilder.unknownTag(child.type, child.name, child.type));
+      }
     }
 
     if (validationResult.length) {

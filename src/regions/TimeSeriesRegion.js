@@ -6,7 +6,6 @@ import NormalizationMixin from '../mixins/Normalization';
 import RegionsMixin from '../mixins/Regions';
 import { TimeSeriesModel } from '../tags/object/TimeSeries';
 import { guidGenerator } from '../core/Helpers';
-import WithStatesMixin from '../mixins/WithStates';
 import Registry from '../core/Registry';
 import { AreaMixin } from '../mixins/AreaMixin';
 import { AnnotationMixin } from '../mixins/AnnotationMixin';
@@ -26,6 +25,7 @@ const Model = types
   })
   .volatile(() => ({
     hideable: true,
+    _brushRef: undefined,
   }))
   .views(self => ({
     get parent() {
@@ -45,6 +45,10 @@ const Model = types
 
   }))
   .actions(self => ({
+    setBrushRef(brushRef) {
+      self._brushRef = brushRef;
+    },
+
     growRight(size) {
       self.end = self.end + size;
     },
@@ -124,7 +128,6 @@ const Model = types
 
 const TimeSeriesRegionModel = types.compose(
   'TimeSeriesRegionModel',
-  WithStatesMixin,
   RegionsMixin,
   AreaMixin,
   NormalizationMixin,

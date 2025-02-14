@@ -1,10 +1,9 @@
-import { types } from 'mobx-state-tree';
+import { isAlive, types } from 'mobx-state-tree';
 
 import NormalizationMixin from '../mixins/Normalization';
 import RegionsMixin from '../mixins/Regions';
 import SpanTextMixin from '../mixins/SpanText';
 import Utils from '../utils';
-import WithStatesMixin from '../mixins/WithStates';
 import { ParagraphLabelsModel } from '../tags/control/ParagraphLabels';
 import { TextAreaModel } from '../tags/control/TextArea/TextArea';
 import { ChoicesModel } from '../tags/control/Choices';
@@ -28,10 +27,11 @@ const Model = types
   .volatile(() => ({
     text: '',
     hideable: true,
+    _range: null,
   }))
   .views(self => ({
     get parent() {
-      return self.object;
+      return isAlive(self) ? self.object : null;
     },
     getRegionElement() {
       return self._spans?.[0];
@@ -44,6 +44,10 @@ const Model = types
 
     setText(text) {
       self.text = text;
+    },
+
+    setRange(range) {
+      self._range = range;
     },
 
     fixOffsets(startOffset, endOffset) {
@@ -96,7 +100,6 @@ const Model = types
 
 const ParagraphsRegionModel = types.compose(
   'ParagraphsRegionModel',
-  WithStatesMixin,
   RegionsMixin,
   AreaMixin,
   NormalizationMixin,
