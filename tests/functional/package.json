@@ -20,7 +20,7 @@
     "cvg:summary": "nyc report --temp-dir=.nyc_output --reporter=text-summary --cwd=. --exclude-after-remap false"
   },
   "dependencies": {
-    "@heartexlabs/ls-test": "git+ssh://git@github.com/heartexlabs/ls-frontend-test#2e91f442891def184597e3beb85660b0f964602a"
+
   },
   "devDependencies": {
     "ts-loader": "^9.4.2",
@@ -29,6 +29,8 @@
     "webpack-cli": "^5.0.1"
   },
   "resolutions": {
-    "@cypress/code-coverage/istanbul-lib-coverage": "^3.2.0"
+    "@cypress/code-coverage/istanbul-lib-coverage": "^3.2.0",
+    "debug": "^4.3.4",
+    "get-func-name": "^2.0.1"
   }
 }

@@ -1,10 +1,4 @@
-import { AudioClassification } from '../examples/audio_classification';
-import { AudioRegions } from '../examples/audio_regions';
-import { TranscribeAudio } from '../examples/transcribe_audio';
-import { VideoRectangles } from '../examples/video_bboxes';
-import { VideoClassification } from '../examples/video';
-import { VideoAudio } from '../examples/video_audio';
-import { AudioVideoParagraph } from '../examples/audio_video_paragraphs';
+
 
 /**
  * Image

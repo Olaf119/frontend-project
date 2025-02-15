@@ -1,10 +1,4 @@
-import { AudioClassification } from '../examples/audio_classification';
-import { AudioRegions } from '../examples/audio_regions';
-import { TranscribeAudio } from '../examples/transcribe_audio';
-import { VideoRectangles } from '../examples/video_bboxes';
-import { VideoClassification } from '../examples/video';
-import { VideoAudio } from '../examples/video_audio';
-import { AudioVideoParagraph } from '../examples/audio_video_paragraphs';
+
 
 /**
  * Image
@@ -36,9 +30,6 @@ import { RichTextHtml } from '../examples/rich_text_html';
 import { RichTextPlain } from '../examples/rich_text_plain';
 import { RichTextPlainRemote } from '../examples/rich_text_plain_remote';
 
-/**
- * Different
- */
 
 
 import { TimeSeries } from '../examples/timeseries';
