@@ -1,117 +1,52 @@
-import { Events } from '../Common/Events';
-import { info } from '../Common/Utils';
+import { AudioClassification } from '../examples/audio_classification';
+import { AudioRegions } from '../examples/audio_regions';
+import { TranscribeAudio } from '../examples/transcribe_audio';
+import { VideoRectangles } from '../examples/video_bboxes';
+import { VideoClassification } from '../examples/video';
+import { VideoAudio } from '../examples/video_audio';
+import { AudioVideoParagraph } from '../examples/audio_video_paragraphs';
 
-interface AudioDecoderEvents {
-  progress: (chunk: number, total: number) => void;
-}
+/**
+ * Image
+ */
+import { ImageBbox } from '../examples/image_bbox';
+import { ImageList } from '../examples/image_list';
+import { ImageBboxLarge } from '../examples/image_bbox_large';
+import { ImageKeyPoint } from '../examples/image_keypoints';
+import { ImageMultilabel } from '../examples/image_multilabel';
+import { ImageEllipselabels } from '../examples/image_ellipses';
+import { ImageOCR } from '../examples/image_ocr';
+import { ImagePolygons } from '../examples/image_polygons';
+import { ImageSegmentation } from '../examples/image_segmentation';
+import { ImageTools } from '../examples/image_tools';
+import { ImageMagicWand } from '../examples/image_magic_wand';
 
-export const DEFAULT_FREQUENCY_HZ = 44100;
+/**
+ * HTML
+ */
+import { HTMLDocument } from '../examples/html_document';
+import { Taxonomy } from '../examples/taxonomy';
+import { TaxonomyLarge } from '../examples/taxonomy_large';
+import { TaxonomyLargeInline } from '../examples/taxonomy_large_inline';
 
-export abstract class BaseAudioDecoder extends Events<AudioDecoderEvents> {
-  chunks?: Float32Array[][];
-  protected cancelled = false;
-  protected decodeId = 0; // if id=0, decode is not in progress
-  protected _dataLength = 0;
-  protected _dataSize = 0;
-  protected _channelCount = 1;
-  protected _sampleRate = DEFAULT_FREQUENCY_HZ;
-  protected _duration = 0;
+/**
+ * RichText (HTML or plain text)
+ */
+import { RichTextHtml } from '../examples/rich_text_html';
+import { RichTextPlain } from '../examples/rich_text_plain';
+import { RichTextPlainRemote } from '../examples/rich_text_plain_remote';
 
-  protected decodingResolve?: () => void;
-  decodingPromise: Promise<void> | undefined;
-  buffer?: AudioBuffer | void;
+/**
+ * Different
+ */
+import { DateTime } from '../examples/datetime';
+import { Pairwise } from '../examples/pairwise';
+import { Repeater } from '../examples/repeater';
+import { Table } from '../examples/table';
+import { TableCsv } from '../examples/table_csv';
+import { Ranker } from '../examples/ranker';
+import { Buckets } from '../examples/ranker_buckets';
 
-  /**
-   * Timeout for removal of the decoder from the cache.
-   * Any subsequent requests for the same source will renew the decoder and cancel the removal.
-   */
-  removalId: any = null;
-
-  constructor(protected src: string) {
-    super();
-  }
-
-  get channelCount() {
-    return this._channelCount;
-  }
-
-  get sampleRate() {
-    return this._sampleRate;
-  }
-
-  get duration() {
-    return this._duration;
-  }
-
-  get dataLength() {
-    if (this.chunks && !this._dataLength) {
-      this._dataLength =
-        (this.chunks?.reduce((a, b) => a + b.reduce((_a, _b) => _a + _b.length, 0), 0) ?? 0) / this._channelCount;
-    }
-    return this._dataLength;
-  }
-
-  get dataSize() {
-    if (this.chunks && !this._dataSize) {
-      this._dataSize =
-        (this.chunks?.reduce((a, b) => a + b.reduce((_a, _b) => _a + _b.byteLength, 0), 0) ?? 0) / this._channelCount;
-    }
-    return this._dataSize;
-  }
-
-  get sourceDecoded() {
-    return this.chunks !== undefined;
-  }
-
-  get sourceDecodeCancelled() {
-    return this.cancelled && this.decodeId === 0;
-  }
-
-  /**
-   * Cancel the decoding process.
-   * This will stop the generator and dispose the worker.
-   */
-  cancel() {
-    if (!this.cancelled) {
-      info('decode:cancelled', this.src);
-    }
-    this.cancelled = true;
-    this.decodeId = 0;
-
-    this.dispose();
-  }
-
-  /**
-   * Dispose the decoder, worker, or any other resources.
-   */
-  protected abstract dispose(): void;
-
-  /**
-   * Renew the decoder instance to allow reuse of the same decoder with any resultant encoding data.
-   */
-  renew() {
-    this.cancelled = false;
-  }
-
-  /**
-   * Since this is a singleton, we don't want to destroy the instance but clear all active
-   * subscriptions and cancel any pending decoding work
-   */
-  destroy() {
-    super.removeAllListeners();
-    this.cancel();
-  }
-
-  /**
-   * Resolve and remove the shared decoding promise.
-   */
-  cleanupResolvers() {
-    this.decodingResolve?.();
-    this.decodingResolve = undefined;
-    this.decodingPromise = undefined;
-    info('decode:cleanup', this.src);
-  }
-
-  abstract init(arraybuffer: ArrayBuffer): Promise<void>;
-  abstract decode(options?: { multiChannel?: boolean }): Promise<void | AudioBuffer>;
-}
+import { TimeSeries } from '../examples/timeseries';
+import { TimeSeriesSingle } from '../examples/timeseries_single';
+import { ClassificationMixed } from '../examples/classification_mixed';

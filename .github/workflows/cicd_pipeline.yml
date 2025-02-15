@@ -76,7 +76,5 @@ jobs:
 
   run_lint:
     name: "Lint"
-    if: github.event_name == 'push' || github.event.pull_request.draft == false
-    uses: ./.github/workflows/eslint.yml
     with:
       sha: ${{ github.event.pull_request.head.sha || github.event.after }}

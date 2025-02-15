@@ -1,4 +1,4 @@
-import React, { createRef, useCallback } from 'react';
+
 import Button from 'antd/lib/button/index';
 import Form from 'antd/lib/form/index';
 import Input from 'antd/lib/input/index';
@@ -31,6 +31,7 @@ import './TextAreaRegionView';
 
 import './TextArea.styl';
 
+
 const { TextArea } = Input;
 
 /**
@@ -60,7 +61,7 @@ const { TextArea } = Input;
  * </View>
  * @example
  * <!--
- *  You can keep submissions unique[^FF_LSDV_4659][^FF_LSDV_4712]
+
  * -->
  * <View>
  *   <Audio name="audio" value="$audio"/>

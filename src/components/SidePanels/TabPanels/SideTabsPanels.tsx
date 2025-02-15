@@ -399,6 +399,21 @@ const SideTabsPanelsComponent: FC<SidePanelsProps> = ({
   },[focusTab]);
 
   useEffect(() => {
+    if (focusTab) {
+      const state = { ...panelData };
+      const foundTab = findPanelViewByName(state, focusTab);
+  
+      if (!foundTab) return;
+      const { panelName, tab, panelViewIndex } = foundTab;
+      const { alignment, detached, visible } = state[panelName];
+      
+      if (!tab.active) setPanelData(setActive(state, panelName, panelViewIndex));
+      if (!detached && collapsedSide[alignment]) setCollapsedSide({ ...collapsedSide, [alignment]: false });
+      if (!visible) onVisibilityChange(panelName, true);
+    } 
+  },[focusTab]);
+
+  useEffect(() => {
     const root = rootRef.current!;
     const checkContentFit = () => {
       return (root.clientWidth ?? 0) < maxWindowWidth;
