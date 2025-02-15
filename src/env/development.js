@@ -49,5 +49,4 @@ import { Buckets } from '../examples/ranker_buckets';
 
 import { TimeSeries } from '../examples/timeseries';
 import { TimeSeriesSingle } from '../examples/timeseries_single';
-import { ClassificationMixed } from '../examples/classification_mixed';
 
