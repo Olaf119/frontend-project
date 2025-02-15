@@ -30,9 +30,6 @@ import { RichTextHtml } from '../examples/rich_text_html';
 import { RichTextPlain } from '../examples/rich_text_plain';
 import { RichTextPlainRemote } from '../examples/rich_text_plain_remote';
 
-/**
- * Different
- */
 
 
 import { TimeSeries } from '../examples/timeseries';
